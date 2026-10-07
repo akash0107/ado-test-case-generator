@@ -1,0 +1,362 @@
+{
+  "schema_version": "1.0",
+  "generated_on": "2026-10-07",
+  "author": "QA (AI-assisted)",
+  "status": "Draft — pending review",
+  "story": {
+    "id": 1,
+    "title": "Swag Labs login functionality",
+    "type": "Issue",
+    "url": "https://dev.azure.com/learnbydoing1/AIAgentsLearning/_workitems/edit/1",
+    "state": "To Do"
+  },
+  "scope_summary": "Covers authentication on the Swag Labs (https://www.saucedemo.com/) login page: page elements, valid login and redirect to /inventory.html, invalid and missing credentials, the locked-out user, password masking, error visibility, and blocking direct access to the inventory page without a session. Username × password inputs were modelled as a decision table (each Valid / Invalid / Empty → 9 combinations); the story's ACs define 7 combinations, and the remaining 2 (Invalid username + Empty password, Empty username + Invalid password) are covered in TC-1-008 and TC-1-007. Main risks: unauthorized access to the inventory, and unclear or missing error feedback.",
+  "out_of_scope": [
+    "Logout, session timeout and 'remember me' behaviour (not part of this story)",
+    "Behaviour of other Swag Labs demo users after login (problem_user, performance_glitch_user, error_user, visual_user); they belong to inventory/checkout stories",
+    "Content and functionality of the Products/Inventory page beyond confirming the redirect",
+    "Password reset or account registration (the application provides neither)",
+    "Automated (Playwright) implementation; the story's automation note is for a separate task",
+    "Cross-browser and mobile-device matrix (no compatibility requirement stated)"
+  ],
+  "requirements": [
+    { "id": "AC-1", "text": "A user with valid credentials who clicks Login is authenticated and redirected to the Products page, and the URL contains /inventory.html.", "source": "description" },
+    { "id": "AC-2", "text": "An invalid username with a valid password fails authentication; the user remains on the login page and an error message is displayed.", "source": "description" },
+    { "id": "AC-3", "text": "A valid username with an invalid password fails authentication and an error message is displayed.", "source": "description" },
+    { "id": "AC-4", "text": "An invalid username with an invalid password fails authentication; the user remains on the login page and an authentication error is displayed.", "source": "description" },
+    { "id": "AC-5", "text": "With an empty username and a password entered, login does not proceed and 'Epic sadface: Username is required' is displayed.", "source": "description" },
+    { "id": "AC-6", "text": "With a username entered and an empty password, login does not proceed and 'Epic sadface: Password is required' is displayed.", "source": "description" },
+    { "id": "AC-7", "text": "With both fields empty, login does not proceed and the username-required message is displayed.", "source": "description" },
+    { "id": "AC-8", "text": "A locked user entering valid credentials is rejected and a locked-user error message is displayed.", "source": "description" },
+    { "id": "REQ-1", "text": "The login page contains a Username field, a Password field and a Login button.", "source": "description" },
+    { "id": "REQ-2", "text": "Password characters are not displayed as plain text while being entered (Business Rule 6).", "source": "description" },
+    { "id": "REQ-3", "text": "Invalid or missing credentials must not provide access to the inventory page (Business Rules 2, 3, 5).", "source": "description" },
+    { "id": "REQ-4", "text": "Authentication errors are clearly visible to the user (Business Rule 7).", "source": "description" },
+    { "id": "IMP-1", "text": "Credentials are matched exactly: a username differing in letter case or surrounding whitespace is not accepted.", "source": "implicit" },
+    { "id": "IMP-2", "text": "Pressing Enter in the Password field submits the login form.", "source": "implicit" },
+    { "id": "IMP-3", "text": "A user can log in successfully with valid credentials immediately after a failed attempt.", "source": "implicit" }
+  ],
+  "assumptions": [
+    "Acceptance criteria are taken from the Description field because the ADO Acceptance Criteria field is empty; AC numbering follows the story (AC1–AC8 → AC-1–AC-8).",
+    "Test environment is the public Swag Labs demo at https://www.saucedemo.com/ with its published demo accounts: standard_user and locked_out_user, password secret_sauce.",
+    "Where the story says only 'an appropriate error message' (AC-2, AC-3, AC-4, AC-8), expected texts use the current Swag Labs messages: 'Epic sadface: Username and password do not match any user in this service' and 'Epic sadface: Sorry, this user has been locked out.'",
+    "AC-3 does not state that the user remains on the login page; this is assumed, consistent with AC-2 and AC-4 and Business Rule 3.",
+    "REQ-3: opening /inventory.html without logging in redirects to the login page and shows 'Epic sadface: You can only access '/inventory.html' when you are logged in.' (current application behaviour; not specified in the story).",
+    "REQ-4: 'clearly visible' is interpreted as an error banner shown above the Login button without scrolling, with both input fields marked with an error icon, and a close (✖) button that dismisses the banner (current application design).",
+    "IMP-1: usernames are case-sensitive and surrounding spaces are not trimmed (standard for this application; not stated in the story).",
+    "IMP-2: Enter-key submission is a standard expectation of HTML login forms; not stated in the story.",
+    "IMP-3: no lockout after a single failed attempt; the story defines locking only as an account configuration (AC-8)."
+  ],
+  "open_questions": [
+    "The ADO Acceptance Criteria field is empty and the ACs are inside the Description. Should they be moved to the Acceptance Criteria field so they can be traced and reported on?",
+    "AC-2, AC-3, AC-4 and AC-8 say 'appropriate error message' without exact text. Are the current Swag Labs messages (see assumptions) the approved wording?",
+    "Should the username be case-insensitive or have surrounding whitespace trimmed? TC-1-013 currently expects both to be rejected.",
+    "Is there a limit on failed login attempts (e.g. temporary lockout after N tries)? The story mentions only pre-configured locked accounts."
+  ],
+  "test_cases": [
+    {
+      "id": "TC-1-001",
+      "title": "Verify standard user logs in and is redirected to the Products page",
+      "objective": "Confirm the main success path: a registered user with valid credentials reaches the inventory page.",
+      "type": "Functional",
+      "technique": "Use Case / Scenario",
+      "priority": 1,
+      "requirement_refs": ["AC-1", "REQ-1"],
+      "preconditions": ["Browser is open with no active Swag Labs session (cookies cleared or private window)."],
+      "test_data": [
+        { "name": "URL", "value": "https://www.saucedemo.com/" },
+        { "name": "Username", "value": "standard_user" },
+        { "name": "Password", "value": "secret_sauce" }
+      ],
+      "steps": [
+        { "action": "Navigate to https://www.saucedemo.com/.", "expected": "The Swag Labs login page is displayed with a **Username** field, a **Password** field and a **Login** button." },
+        { "action": "Enter 'standard_user' in **Username**." },
+        { "action": "Enter 'secret_sauce' in **Password**." },
+        { "action": "Click **Login**.", "expected": "The browser URL changes to https://www.saucedemo.com/inventory.html." },
+        { "action": "Observe the page content.", "expected": "The page header shows 'Products', the product list is displayed, and no error message is shown." }
+      ],
+      "postconditions": [],
+      "tags": ["smoke", "e2e"]
+    },
+    {
+      "id": "TC-1-002",
+      "title": "Reject login with an unregistered username and a valid password",
+      "objective": "Verify that an invalid username alone causes authentication to fail without granting access.",
+      "type": "Negative",
+      "technique": "Equivalence Partitioning",
+      "priority": 1,
+      "requirement_refs": ["AC-2", "REQ-3"],
+      "preconditions": ["Browser is on https://www.saucedemo.com/ with no active session."],
+      "test_data": [
+        { "name": "Username", "value": "invalid_user" },
+        { "name": "Password", "value": "secret_sauce" }
+      ],
+      "steps": [
+        { "action": "Enter 'invalid_user' in **Username** and 'secret_sauce' in **Password**." },
+        { "action": "Click **Login**.", "expected": "The error 'Epic sadface: Username and password do not match any user in this service' is displayed." },
+        { "action": "Check the browser URL and page content.", "expected": "The URL remains https://www.saucedemo.com/ and the Products page is not displayed." }
+      ],
+      "postconditions": [],
+      "tags": ["regression"]
+    },
+    {
+      "id": "TC-1-003",
+      "title": "Reject login with a valid username and an incorrect password",
+      "objective": "Verify that a wrong password for an existing account causes authentication to fail without granting access.",
+      "type": "Negative",
+      "technique": "Equivalence Partitioning",
+      "priority": 1,
+      "requirement_refs": ["AC-3", "REQ-3"],
+      "preconditions": ["Browser is on https://www.saucedemo.com/ with no active session."],
+      "test_data": [
+        { "name": "Username", "value": "standard_user" },
+        { "name": "Password", "value": "wrong_password" }
+      ],
+      "steps": [
+        { "action": "Enter 'standard_user' in **Username** and 'wrong_password' in **Password**." },
+        { "action": "Click **Login**.", "expected": "The error 'Epic sadface: Username and password do not match any user in this service' is displayed." },
+        { "action": "Check the browser URL and page content.", "expected": "The URL remains https://www.saucedemo.com/ and the Products page is not displayed." }
+      ],
+      "postconditions": [],
+      "tags": ["regression"]
+    },
+    {
+      "id": "TC-1-004",
+      "title": "Reject login for a locked-out user with valid credentials",
+      "objective": "Ensure an account configured as locked cannot access the application even with the correct password.",
+      "type": "Security",
+      "technique": "Equivalence Partitioning",
+      "priority": 1,
+      "requirement_refs": ["AC-8", "REQ-3"],
+      "preconditions": [
+        "Browser is on https://www.saucedemo.com/ with no active session.",
+        "Account 'locked_out_user' is configured as locked (default in the Swag Labs demo)."
+      ],
+      "test_data": [
+        { "name": "Username", "value": "locked_out_user" },
+        { "name": "Password", "value": "secret_sauce" }
+      ],
+      "steps": [
+        { "action": "Enter 'locked_out_user' in **Username** and 'secret_sauce' in **Password**." },
+        { "action": "Click **Login**.", "expected": "The error 'Epic sadface: Sorry, this user has been locked out.' is displayed." },
+        { "action": "Check the browser URL and page content.", "expected": "The URL remains https://www.saucedemo.com/ and the Products page is not displayed." }
+      ],
+      "postconditions": [],
+      "tags": ["security", "regression"]
+    },
+    {
+      "id": "TC-1-005",
+      "title": "Prevent direct access to the inventory page without logging in",
+      "objective": "Verify the inventory page cannot be reached by URL without an authenticated session.",
+      "type": "Security",
+      "technique": "Error Guessing",
+      "priority": 1,
+      "requirement_refs": ["REQ-3"],
+      "preconditions": ["Browser has no active Swag Labs session (cookies cleared or new private window)."],
+      "test_data": [{ "name": "URL", "value": "https://www.saucedemo.com/inventory.html" }],
+      "steps": [
+        { "action": "Navigate directly to https://www.saucedemo.com/inventory.html.", "expected": "The login page is displayed instead of the Products page." },
+        { "action": "Observe the error area above the **Login** button.", "expected": "The error \"Epic sadface: You can only access '/inventory.html' when you are logged in.\" is displayed and no product list is visible." }
+      ],
+      "postconditions": [],
+      "tags": ["security"]
+    },
+    {
+      "id": "TC-1-006",
+      "title": "Reject login when both username and password are invalid",
+      "objective": "Verify authentication fails when neither credential matches an account.",
+      "type": "Negative",
+      "technique": "Decision Table",
+      "priority": 2,
+      "requirement_refs": ["AC-4", "REQ-3"],
+      "preconditions": ["Browser is on https://www.saucedemo.com/ with no active session."],
+      "test_data": [
+        { "name": "Username", "value": "invalid_user" },
+        { "name": "Password", "value": "invalid_pass" }
+      ],
+      "steps": [
+        { "action": "Enter 'invalid_user' in **Username** and 'invalid_pass' in **Password**." },
+        { "action": "Click **Login**.", "expected": "The error 'Epic sadface: Username and password do not match any user in this service' is displayed." },
+        { "action": "Check the browser URL and page content.", "expected": "The URL remains https://www.saucedemo.com/ and the Products page is not displayed." }
+      ],
+      "postconditions": [],
+      "tags": ["regression"]
+    },
+    {
+      "id": "TC-1-007",
+      "title": "Display 'Username is required' when username is empty and password is entered",
+      "objective": "Verify the mandatory-username rule applies whether the entered password is valid or invalid (decision table: Empty username × Valid / Invalid password).",
+      "type": "Negative",
+      "technique": "Decision Table",
+      "priority": 2,
+      "requirement_refs": ["AC-5", "REQ-3"],
+      "preconditions": ["Browser is on https://www.saucedemo.com/ with no active session."],
+      "test_data": [
+        { "name": "Valid password", "value": "secret_sauce" },
+        { "name": "Invalid password", "value": "invalid_pass" }
+      ],
+      "steps": [
+        { "action": "Leave **Username** empty, enter 'secret_sauce' in **Password** and click **Login**.", "expected": "The error 'Epic sadface: Username is required' is displayed and the URL remains https://www.saucedemo.com/." },
+        { "action": "Reload the page. Leave **Username** empty, enter 'invalid_pass' in **Password** and click **Login**.", "expected": "The error 'Epic sadface: Username is required' is displayed and the URL remains https://www.saucedemo.com/." }
+      ],
+      "postconditions": [],
+      "tags": ["validation"]
+    },
+    {
+      "id": "TC-1-008",
+      "title": "Display 'Password is required' when password is empty and username is entered",
+      "objective": "Verify the mandatory-password rule applies whether the entered username is valid or invalid (decision table: Valid / Invalid username × Empty password).",
+      "type": "Negative",
+      "technique": "Decision Table",
+      "priority": 2,
+      "requirement_refs": ["AC-6", "REQ-3"],
+      "preconditions": ["Browser is on https://www.saucedemo.com/ with no active session."],
+      "test_data": [
+        { "name": "Valid username", "value": "standard_user" },
+        { "name": "Invalid username", "value": "invalid_user" }
+      ],
+      "steps": [
+        { "action": "Enter 'standard_user' in **Username**, leave **Password** empty and click **Login**.", "expected": "The error 'Epic sadface: Password is required' is displayed and the URL remains https://www.saucedemo.com/." },
+        { "action": "Reload the page. Enter 'invalid_user' in **Username**, leave **Password** empty and click **Login**.", "expected": "The error 'Epic sadface: Password is required' is displayed and the URL remains https://www.saucedemo.com/." }
+      ],
+      "postconditions": [],
+      "tags": ["validation"]
+    },
+    {
+      "id": "TC-1-009",
+      "title": "Display 'Username is required' when both fields are empty",
+      "objective": "Verify that with no input the username validation takes precedence and login does not proceed.",
+      "type": "Negative",
+      "technique": "Decision Table",
+      "priority": 2,
+      "requirement_refs": ["AC-7"],
+      "preconditions": ["Browser is on https://www.saucedemo.com/ with no active session; both fields are empty."],
+      "test_data": [],
+      "steps": [
+        { "action": "Without entering anything, click **Login**.", "expected": "The error 'Epic sadface: Username is required' is displayed; 'Password is required' is not shown." },
+        { "action": "Check the browser URL.", "expected": "The URL remains https://www.saucedemo.com/." }
+      ],
+      "postconditions": [],
+      "tags": ["validation"]
+    },
+    {
+      "id": "TC-1-010",
+      "title": "Verify password characters are masked while typing",
+      "objective": "Ensure the password is never displayed as plain text on screen.",
+      "type": "Security",
+      "technique": "Checklist",
+      "priority": 2,
+      "requirement_refs": ["REQ-2"],
+      "preconditions": ["Browser is on https://www.saucedemo.com/."],
+      "test_data": [{ "name": "Password", "value": "secret_sauce" }],
+      "steps": [
+        { "action": "Click in **Password** and type 'secret_sauce'.", "expected": "Each typed character appears as a masking symbol (• or *); the text 'secret_sauce' is not readable on screen." },
+        { "action": "Open browser developer tools and inspect the **Password** input element.", "expected": "The input has the attribute type=\"password\"." }
+      ],
+      "postconditions": [],
+      "tags": ["security"]
+    },
+    {
+      "id": "TC-1-011",
+      "title": "Reject SQL-injection and script strings in login fields without granting access",
+      "objective": "Probe common injection inputs to confirm they are treated as ordinary invalid credentials.",
+      "type": "Security",
+      "technique": "Error Guessing",
+      "priority": 2,
+      "requirement_refs": ["REQ-3"],
+      "preconditions": ["Browser is on https://www.saucedemo.com/ with no active session."],
+      "test_data": [
+        { "name": "SQL injection", "value": "' OR '1'='1" },
+        { "name": "Script injection", "value": "<script>alert('xss')</script>" }
+      ],
+      "steps": [
+        { "action": "Enter ' OR '1'='1 in both **Username** and **Password** and click **Login**.", "expected": "The error 'Epic sadface: Username and password do not match any user in this service' is displayed and the URL remains https://www.saucedemo.com/." },
+        { "action": "Reload the page. Enter <script>alert('xss')</script> in **Username**, 'secret_sauce' in **Password** and click **Login**.", "expected": "No browser alert pop-up appears; the 'Username and password do not match any user in this service' error is displayed and the URL remains https://www.saucedemo.com/." }
+      ],
+      "postconditions": [],
+      "tags": ["security"]
+    },
+    {
+      "id": "TC-1-012",
+      "title": "Display authentication errors prominently near the login form",
+      "objective": "Verify error feedback is easy to notice and is associated with the input fields.",
+      "type": "UI",
+      "technique": "Checklist",
+      "priority": 3,
+      "requirement_refs": ["REQ-4"],
+      "preconditions": ["Browser window is 1366×768 or larger, on https://www.saucedemo.com/ with no active session."],
+      "test_data": [
+        { "name": "Username", "value": "invalid_user" },
+        { "name": "Password", "value": "invalid_pass" }
+      ],
+      "steps": [
+        { "action": "Enter 'invalid_user' / 'invalid_pass' and click **Login**.", "expected": "An error banner with a red background appears directly above the **Login** button and is fully visible without scrolling." },
+        { "action": "Look at the **Username** and **Password** fields.", "expected": "Both fields display an error (✖) icon and a red underline." },
+        { "action": "Click the close (✖) button on the error banner.", "expected": "The banner disappears, the field error icons are removed, and the entered values remain in the fields." }
+      ],
+      "postconditions": [],
+      "tags": ["ui"]
+    },
+    {
+      "id": "TC-1-013",
+      "title": "Reject username with different letter case or surrounding spaces",
+      "objective": "Verify credentials are matched exactly, so near-miss usernames do not authenticate.",
+      "type": "Negative",
+      "technique": "Error Guessing",
+      "priority": 3,
+      "requirement_refs": ["IMP-1"],
+      "preconditions": ["Browser is on https://www.saucedemo.com/ with no active session."],
+      "test_data": [
+        { "name": "Upper-case username", "value": "Standard_User" },
+        { "name": "Username with spaces", "value": "' standard_user ' (one leading and one trailing space)" },
+        { "name": "Password", "value": "secret_sauce" }
+      ],
+      "steps": [
+        { "action": "Enter 'Standard_User' in **Username**, 'secret_sauce' in **Password** and click **Login**.", "expected": "The error 'Epic sadface: Username and password do not match any user in this service' is displayed and the URL remains https://www.saucedemo.com/." },
+        { "action": "Reload the page. Enter ' standard_user ' (with leading and trailing space) in **Username**, 'secret_sauce' in **Password** and click **Login**.", "expected": "The error 'Epic sadface: Username and password do not match any user in this service' is displayed and the URL remains https://www.saucedemo.com/." }
+      ],
+      "postconditions": [],
+      "tags": ["validation"]
+    },
+    {
+      "id": "TC-1-014",
+      "title": "Allow login by pressing Enter in the Password field",
+      "objective": "Verify keyboard users can submit the form without clicking the Login button.",
+      "type": "Usability",
+      "technique": "Use Case / Scenario",
+      "priority": 3,
+      "requirement_refs": ["IMP-2", "AC-1"],
+      "preconditions": ["Browser is on https://www.saucedemo.com/ with no active session."],
+      "test_data": [
+        { "name": "Username", "value": "standard_user" },
+        { "name": "Password", "value": "secret_sauce" }
+      ],
+      "steps": [
+        { "action": "Enter 'standard_user' in **Username** and 'secret_sauce' in **Password**." },
+        { "action": "With focus in **Password**, press the Enter key.", "expected": "The URL changes to https://www.saucedemo.com/inventory.html and the 'Products' header is displayed." }
+      ],
+      "postconditions": [],
+      "tags": ["keyboard"]
+    },
+    {
+      "id": "TC-1-015",
+      "title": "Allow successful login immediately after a failed attempt",
+      "objective": "Verify a failed attempt leaves no blocking state and the user can recover by correcting the credentials.",
+      "type": "Functional",
+      "technique": "Error Guessing",
+      "priority": 3,
+      "requirement_refs": ["IMP-3", "AC-1"],
+      "preconditions": ["Browser is on https://www.saucedemo.com/ with no active session."],
+      "test_data": [
+        { "name": "Wrong password", "value": "wrong_password" },
+        { "name": "Correct password", "value": "secret_sauce" }
+      ],
+      "steps": [
+        { "action": "Enter 'standard_user' / 'wrong_password' and click **Login**.", "expected": "The error 'Epic sadface: Username and password do not match any user in this service' is displayed." },
+        { "action": "Clear **Password**, enter 'secret_sauce' and click **Login**.", "expected": "The URL changes to https://www.saucedemo.com/inventory.html, the 'Products' header is displayed and no error message is shown." }
+      ],
+      "postconditions": [],
+      "tags": ["regression"]
+    }
+  ]
+}

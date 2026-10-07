@@ -1,0 +1,89 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "manual-test-case-generator/test-case-schema.json",
+  "title": "Manual test case specification",
+  "description": "Contract for test-cases.json written by the manual-test-case-generator skill. Enforced by scripts/testcase_schema.py, which also applies quality rules (coverage, vague expectations, duplicate titles).",
+  "type": "object",
+  "required": ["schema_version", "story", "requirements", "test_cases", "assumptions", "open_questions"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "generated_on": { "type": "string", "format": "date" },
+    "author": { "type": "string", "description": "Who generated/owns the spec, e.g. 'QA (AI-assisted)'" },
+    "status": { "type": "string", "examples": ["Draft — pending review", "Reviewed", "Approved"] },
+    "story": {
+      "type": "object",
+      "required": ["id", "title"],
+      "properties": {
+        "id": { "type": "integer" },
+        "title": { "type": "string", "minLength": 1 },
+        "type": { "type": "string" },
+        "url": { "type": "string", "format": "uri" },
+        "state": { "type": "string" }
+      }
+    },
+    "scope_summary": { "type": "string", "description": "2-4 sentences: what is under test and the main risks." },
+    "out_of_scope": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "requirements": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "text", "source"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^(AC|REQ|NFR|IMP)-\\d+$", "description": "AC = acceptance criterion, REQ = from description, NFR = non-functional, IMP = implicit/derived" },
+          "text": { "type": "string", "minLength": 1, "description": "One atomic, testable statement." },
+          "source": { "enum": ["acceptance_criteria", "description", "parent", "comment", "implicit", "user"] },
+          "testable": { "type": "boolean", "default": true },
+          "note": { "type": "string", "description": "Required when testable is false." }
+        }
+      }
+    },
+    "assumptions": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "open_questions": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "test_cases": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "title", "objective", "type", "technique", "priority", "requirement_refs", "steps"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^TC-\\d+-\\d{3}$" },
+          "title": { "type": "string", "minLength": 1, "maxLength": 128 },
+          "objective": { "type": "string", "minLength": 1 },
+          "type": {
+            "enum": ["Functional", "Negative", "Boundary", "UI", "Integration", "Security", "Accessibility", "Usability", "Performance", "Compatibility", "Data Integrity", "Regression"]
+          },
+          "technique": {
+            "enum": ["Equivalence Partitioning", "Boundary Value Analysis", "Decision Table", "State Transition", "Use Case / Scenario", "Error Guessing", "Pairwise", "Checklist", "Exploratory Charter"]
+          },
+          "priority": { "type": "integer", "minimum": 1, "maximum": 4, "description": "Azure DevOps priority: 1 critical … 4 low" },
+          "requirement_refs": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+          "preconditions": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+          "test_data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["name", "value"],
+              "properties": { "name": { "type": "string", "minLength": 1 }, "value": {} }
+            }
+          },
+          "steps": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": ["action"],
+              "properties": {
+                "action": { "type": "string", "minLength": 1 },
+                "expected": { "type": "string", "description": "Observable outcome. Required on the final step." }
+              }
+            }
+          },
+          "postconditions": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+          "tags": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+        }
+      }
+    }
+  }
+}

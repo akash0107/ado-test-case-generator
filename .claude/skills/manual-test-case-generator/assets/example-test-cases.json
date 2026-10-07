@@ -1,0 +1,198 @@
+{
+  "schema_version": "1.0",
+  "generated_on": "2026-10-07",
+  "author": "QA (AI-assisted)",
+  "status": "Draft — pending review",
+  "story": {
+    "id": 1001,
+    "title": "As a registered user, I want to reset my password via an emailed link so I can regain access to my account",
+    "type": "User Story",
+    "url": "https://dev.azure.com/contoso/Webshop/_workitems/edit/1001",
+    "state": "Active"
+  },
+  "scope_summary": "Covers the self-service 'Forgot password' flow on the web login page: requesting a reset link, link validity (single use, 30-minute expiry), new-password rules (8–64 chars, at least one digit and one letter) and the post-reset login. Main risks: account takeover through link reuse or user enumeration, and users being locked out by unclear validation.",
+  "out_of_scope": [
+    "Mobile app reset flow (separate story #1002)",
+    "Email template visual design (owned by Marketing)",
+    "SMS-based recovery"
+  ],
+  "requirements": [
+    { "id": "AC-1", "text": "A user can request a reset link from the login page by entering their email address.", "source": "acceptance_criteria" },
+    { "id": "AC-2", "text": "The same neutral confirmation message is shown whether or not the email is registered.", "source": "acceptance_criteria" },
+    { "id": "AC-3", "text": "The reset link expires 30 minutes after it is issued.", "source": "acceptance_criteria" },
+    { "id": "AC-4", "text": "The new password must be 8–64 characters and contain at least one letter and one digit.", "source": "acceptance_criteria" },
+    { "id": "AC-5", "text": "A reset link can be used only once.", "source": "acceptance_criteria" },
+    { "id": "IMP-1", "text": "After a successful reset the old password no longer works and the new one does.", "source": "implicit" }
+  ],
+  "assumptions": [
+    "The confirmation message text is 'If an account exists for that email, we've sent a reset link.' (not specified in the story; taken from the UX mock referenced in the comments).",
+    "IMP-1: the old password is invalidated immediately on reset (standard behaviour; not stated explicitly).",
+    "The test environment uses a mail catcher (e.g. MailHog) where emails can be read."
+  ],
+  "open_questions": [
+    "Should existing sessions on other devices be signed out after a reset? This affects whether a security test for session invalidation is needed.",
+    "Is there a rate limit on reset requests per email or IP? If so, what is the threshold?",
+    "Does requesting a second link invalidate the first one?"
+  ],
+  "test_cases": [
+    {
+      "id": "TC-1001-001",
+      "title": "Verify registered user can reset password via emailed link and sign in",
+      "objective": "Confirm the main success scenario end to end: request, email, reset, login with the new password.",
+      "type": "Functional",
+      "technique": "Use Case / Scenario",
+      "priority": 1,
+      "requirement_refs": ["AC-1", "AC-4", "IMP-1"],
+      "preconditions": [
+        "User account <registered_user_email> exists with password 'OldPass123'.",
+        "User is signed out.",
+        "Mail catcher inbox for <registered_user_email> is empty."
+      ],
+      "test_data": [
+        { "name": "Email", "value": "<registered_user_email>" },
+        { "name": "New password", "value": "NewPass2026" }
+      ],
+      "steps": [
+        { "action": "Open the login page and click **Forgot password?**", "expected": "The **Reset your password** page is displayed with an **Email** field and a **Send reset link** button." },
+        { "action": "Enter <registered_user_email> in **Email** and click **Send reset link**.", "expected": "The message 'If an account exists for that email, we've sent a reset link.' is displayed." },
+        { "action": "Open the mail catcher and open the newest email to <registered_user_email>.", "expected": "One email with subject containing 'Reset your password' is present and contains a reset link." },
+        { "action": "Click the reset link.", "expected": "The **Choose a new password** page opens with **New password** and **Confirm password** fields." },
+        { "action": "Enter 'NewPass2026' in both fields and click **Reset password**.", "expected": "The message 'Your password has been reset.' is shown and the user is redirected to the login page." },
+        { "action": "Sign in with <registered_user_email> / 'NewPass2026'.", "expected": "Sign-in succeeds and the account dashboard is displayed." }
+      ],
+      "postconditions": ["Reset the account password back to 'OldPass123' for subsequent runs."],
+      "tags": ["smoke", "e2e"]
+    },
+    {
+      "id": "TC-1001-002",
+      "title": "Verify old password is rejected after a successful reset",
+      "objective": "Ensure the previous credential is invalidated so a leaked old password cannot be used.",
+      "type": "Security",
+      "technique": "Use Case / Scenario",
+      "priority": 1,
+      "requirement_refs": ["IMP-1"],
+      "preconditions": [
+        "Password for <registered_user_email> was just reset from 'OldPass123' to 'NewPass2026' (e.g. by executing TC-1001-001 steps 1–5).",
+        "User is signed out."
+      ],
+      "test_data": [{ "name": "Old password", "value": "OldPass123" }],
+      "steps": [
+        { "action": "On the login page, enter <registered_user_email> and 'OldPass123', then click **Sign in**.", "expected": "Sign-in is refused with the message 'Incorrect email or password.' and the user stays on the login page." }
+      ],
+      "postconditions": [],
+      "tags": ["security", "regression"]
+    },
+    {
+      "id": "TC-1001-003",
+      "title": "Display neutral confirmation for an unregistered email without sending mail",
+      "objective": "Prevent user enumeration: an unknown email must produce the same message and no email.",
+      "type": "Security",
+      "technique": "Equivalence Partitioning",
+      "priority": 1,
+      "requirement_refs": ["AC-2"],
+      "preconditions": ["No account exists for 'nobody.qa+1001@example.com'.", "User is signed out."],
+      "test_data": [{ "name": "Unregistered email", "value": "nobody.qa+1001@example.com" }],
+      "steps": [
+        { "action": "Open **Forgot password?**, enter 'nobody.qa+1001@example.com' and click **Send reset link**.", "expected": "The message 'If an account exists for that email, we've sent a reset link.' is displayed — identical to the registered-email case." },
+        { "action": "Check the mail catcher for 'nobody.qa+1001@example.com' after 2 minutes.", "expected": "No email has been delivered to that address." }
+      ],
+      "postconditions": [],
+      "tags": ["security"]
+    },
+    {
+      "id": "TC-1001-004",
+      "title": "Reject reset link used after 30-minute expiry",
+      "objective": "Verify the link expiry boundary (just outside 30 minutes).",
+      "type": "Boundary",
+      "technique": "Boundary Value Analysis",
+      "priority": 2,
+      "requirement_refs": ["AC-3"],
+      "preconditions": [
+        "A reset link was requested for <registered_user_email> at time T and has not been used.",
+        "Tester can wait, or ask Dev to shorten the clock in the test environment."
+      ],
+      "test_data": [{ "name": "Open link at", "value": "T + 30 min 30 s" }],
+      "steps": [
+        { "action": "At T + 30 minutes 30 seconds, open the reset link.", "expected": "The page shows 'This reset link has expired. Please request a new one.' and no password fields are displayed." }
+      ],
+      "postconditions": [],
+      "tags": ["boundary"]
+    },
+    {
+      "id": "TC-1001-005",
+      "title": "Allow reset link used just before 30-minute expiry",
+      "objective": "Verify the link expiry boundary (just inside 30 minutes).",
+      "type": "Boundary",
+      "technique": "Boundary Value Analysis",
+      "priority": 2,
+      "requirement_refs": ["AC-3"],
+      "preconditions": ["A reset link was requested for <registered_user_email> at time T and has not been used."],
+      "test_data": [{ "name": "Open link at", "value": "T + 29 min 30 s" }],
+      "steps": [
+        { "action": "At T + 29 minutes 30 seconds, open the reset link.", "expected": "The **Choose a new password** page opens with password fields enabled." }
+      ],
+      "postconditions": [],
+      "tags": ["boundary"]
+    },
+    {
+      "id": "TC-1001-006",
+      "title": "Reject new password outside 8–64 character length limits",
+      "objective": "Verify length boundaries of the password rule: 7 and 65 rejected, 8 and 64 accepted.",
+      "type": "Boundary",
+      "technique": "Boundary Value Analysis",
+      "priority": 2,
+      "requirement_refs": ["AC-4"],
+      "preconditions": ["Tester is on the **Choose a new password** page via a valid, unused reset link."],
+      "test_data": [
+        { "name": "7 chars", "value": "Abcde12" },
+        { "name": "8 chars", "value": "Abcdef12" },
+        { "name": "64 chars", "value": "A1 followed by 62 'a' characters" },
+        { "name": "65 chars", "value": "A1 followed by 63 'a' characters" }
+      ],
+      "steps": [
+        { "action": "Enter 'Abcde12' (7 chars) in both fields and click **Reset password**.", "expected": "Error 'Password must be 8–64 characters.' is shown under **New password**; the page does not submit." },
+        { "action": "Enter the 65-character value in both fields and click **Reset password**.", "expected": "Error 'Password must be 8–64 characters.' is shown; the page does not submit." },
+        { "action": "Enter the 64-character value in both fields.", "expected": "No length error is shown." },
+        { "action": "Replace with 'Abcdef12' (8 chars) in both fields and click **Reset password**.", "expected": "The message 'Your password has been reset.' is shown." }
+      ],
+      "postconditions": ["Reset the account password back to 'OldPass123'."],
+      "tags": ["validation"]
+    },
+    {
+      "id": "TC-1001-007",
+      "title": "Reject new password without a digit or without a letter",
+      "objective": "Verify each invalid composition class of the password rule separately.",
+      "type": "Negative",
+      "technique": "Equivalence Partitioning",
+      "priority": 2,
+      "requirement_refs": ["AC-4"],
+      "preconditions": ["Tester is on the **Choose a new password** page via a valid, unused reset link."],
+      "test_data": [
+        { "name": "Letters only", "value": "abcdefgh" },
+        { "name": "Digits only", "value": "12345678" }
+      ],
+      "steps": [
+        { "action": "Enter 'abcdefgh' in both fields and click **Reset password**.", "expected": "Error 'Password must contain at least one letter and one digit.' is shown; the page does not submit." },
+        { "action": "Enter '12345678' in both fields and click **Reset password**.", "expected": "Error 'Password must contain at least one letter and one digit.' is shown; the page does not submit." }
+      ],
+      "postconditions": [],
+      "tags": ["validation"]
+    },
+    {
+      "id": "TC-1001-008",
+      "title": "Prevent reuse of a reset link that was already used",
+      "objective": "Ensure a reset link is single-use so an intercepted link cannot be replayed.",
+      "type": "Security",
+      "technique": "State Transition",
+      "priority": 1,
+      "requirement_refs": ["AC-5"],
+      "preconditions": ["A reset link for <registered_user_email> has just been used successfully to set a new password."],
+      "test_data": [],
+      "steps": [
+        { "action": "Open the same reset link again in a new browser tab.", "expected": "The page shows 'This reset link is no longer valid. Please request a new one.' and no password fields are displayed." }
+      ],
+      "postconditions": ["Reset the account password back to 'OldPass123'."],
+      "tags": ["security", "regression"]
+    }
+  ]
+}

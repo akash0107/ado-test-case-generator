@@ -1,0 +1,20 @@
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
+
+# Local Claude Code settings (personal)
+.claude/settings.local.json
+
+# Generated working output (per user / per Azure DevOps org). Curated samples live in examples/.
+test-cases/

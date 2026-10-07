@@ -1,0 +1,98 @@
+﻿ID,Work Item Type,Title,Test Step,Step Action,Step Expected,Area Path,Assigned To,State,Priority,Tags
+,Test Case,TC-1-001: Verify standard user logs in and is redirected to the Products page,1,"Setup:
+- Browser is open with no active Swag Labs session (cookies cleared or private window).
+- Test data — URL: https://www.saucedemo.com/
+- Test data — Username: standard_user
+- Test data — Password: secret_sauce",All preconditions are met.,,,Design,1,Story-1; Functional; smoke; e2e
+,,,2,Navigate to https://www.saucedemo.com/.,"The Swag Labs login page is displayed with a Username field, a Password field and a Login button.",,,,,
+,,,3,Enter 'standard_user' in Username.,,,,,,
+,,,4,Enter 'secret_sauce' in Password.,,,,,,
+,,,5,Click Login.,The browser URL changes to https://www.saucedemo.com/inventory.html.,,,,,
+,,,6,Observe the page content.,"The page header shows 'Products', the product list is displayed, and no error message is shown.",,,,,
+,Test Case,TC-1-002: Reject login with an unregistered username and a valid password,1,"Setup:
+- Browser is on https://www.saucedemo.com/ with no active session.
+- Test data — Username: invalid_user
+- Test data — Password: secret_sauce",All preconditions are met.,,,Design,1,Story-1; Negative; regression
+,,,2,Enter 'invalid_user' in Username and 'secret_sauce' in Password.,,,,,,
+,,,3,Click Login.,The error 'Epic sadface: Username and password do not match any user in this service' is displayed.,,,,,
+,,,4,Check the browser URL and page content.,The URL remains https://www.saucedemo.com/ and the Products page is not displayed.,,,,,
+,Test Case,TC-1-003: Reject login with a valid username and an incorrect password,1,"Setup:
+- Browser is on https://www.saucedemo.com/ with no active session.
+- Test data — Username: standard_user
+- Test data — Password: wrong_password",All preconditions are met.,,,Design,1,Story-1; Negative; regression
+,,,2,Enter 'standard_user' in Username and 'wrong_password' in Password.,,,,,,
+,,,3,Click Login.,The error 'Epic sadface: Username and password do not match any user in this service' is displayed.,,,,,
+,,,4,Check the browser URL and page content.,The URL remains https://www.saucedemo.com/ and the Products page is not displayed.,,,,,
+,Test Case,TC-1-004: Reject login for a locked-out user with valid credentials,1,"Setup:
+- Browser is on https://www.saucedemo.com/ with no active session.
+- Account 'locked_out_user' is configured as locked (default in the Swag Labs demo).
+- Test data — Username: locked_out_user
+- Test data — Password: secret_sauce",All preconditions are met.,,,Design,1,Story-1; Security; security; regression
+,,,2,Enter 'locked_out_user' in Username and 'secret_sauce' in Password.,,,,,,
+,,,3,Click Login.,"The error 'Epic sadface: Sorry, this user has been locked out.' is displayed.",,,,,
+,,,4,Check the browser URL and page content.,The URL remains https://www.saucedemo.com/ and the Products page is not displayed.,,,,,
+,Test Case,TC-1-005: Prevent direct access to the inventory page without logging in,1,"Setup:
+- Browser has no active Swag Labs session (cookies cleared or new private window).
+- Test data — URL: https://www.saucedemo.com/inventory.html",All preconditions are met.,,,Design,1,Story-1; Security; security
+,,,2,Navigate directly to https://www.saucedemo.com/inventory.html.,The login page is displayed instead of the Products page.,,,,,
+,,,3,Observe the error area above the Login button.,"The error ""Epic sadface: You can only access '/inventory.html' when you are logged in."" is displayed and no product list is visible.",,,,,
+,Test Case,TC-1-006: Reject login when both username and password are invalid,1,"Setup:
+- Browser is on https://www.saucedemo.com/ with no active session.
+- Test data — Username: invalid_user
+- Test data — Password: invalid_pass",All preconditions are met.,,,Design,2,Story-1; Negative; regression
+,,,2,Enter 'invalid_user' in Username and 'invalid_pass' in Password.,,,,,,
+,,,3,Click Login.,The error 'Epic sadface: Username and password do not match any user in this service' is displayed.,,,,,
+,,,4,Check the browser URL and page content.,The URL remains https://www.saucedemo.com/ and the Products page is not displayed.,,,,,
+,Test Case,TC-1-007: Display 'Username is required' when username is empty and password is entered,1,"Setup:
+- Browser is on https://www.saucedemo.com/ with no active session.
+- Test data — Valid password: secret_sauce
+- Test data — Invalid password: invalid_pass",All preconditions are met.,,,Design,2,Story-1; Negative; validation
+,,,2,"Leave Username empty, enter 'secret_sauce' in Password and click Login.",The error 'Epic sadface: Username is required' is displayed and the URL remains https://www.saucedemo.com/.,,,,,
+,,,3,"Reload the page. Leave Username empty, enter 'invalid_pass' in Password and click Login.",The error 'Epic sadface: Username is required' is displayed and the URL remains https://www.saucedemo.com/.,,,,,
+,Test Case,TC-1-008: Display 'Password is required' when password is empty and username is entered,1,"Setup:
+- Browser is on https://www.saucedemo.com/ with no active session.
+- Test data — Valid username: standard_user
+- Test data — Invalid username: invalid_user",All preconditions are met.,,,Design,2,Story-1; Negative; validation
+,,,2,"Enter 'standard_user' in Username, leave Password empty and click Login.",The error 'Epic sadface: Password is required' is displayed and the URL remains https://www.saucedemo.com/.,,,,,
+,,,3,"Reload the page. Enter 'invalid_user' in Username, leave Password empty and click Login.",The error 'Epic sadface: Password is required' is displayed and the URL remains https://www.saucedemo.com/.,,,,,
+,Test Case,TC-1-009: Display 'Username is required' when both fields are empty,1,"Setup:
+- Browser is on https://www.saucedemo.com/ with no active session; both fields are empty.",All preconditions are met.,,,Design,2,Story-1; Negative; validation
+,,,2,"Without entering anything, click Login.",The error 'Epic sadface: Username is required' is displayed; 'Password is required' is not shown.,,,,,
+,,,3,Check the browser URL.,The URL remains https://www.saucedemo.com/.,,,,,
+,Test Case,TC-1-010: Verify password characters are masked while typing,1,"Setup:
+- Browser is on https://www.saucedemo.com/.
+- Test data — Password: secret_sauce",All preconditions are met.,,,Design,2,Story-1; Security; security
+,,,2,Click in Password and type 'secret_sauce'.,Each typed character appears as a masking symbol (• or *); the text 'secret_sauce' is not readable on screen.,,,,,
+,,,3,Open browser developer tools and inspect the Password input element.,"The input has the attribute type=""password"".",,,,,
+,Test Case,TC-1-011: Reject SQL-injection and script strings in login fields without granting access,1,"Setup:
+- Browser is on https://www.saucedemo.com/ with no active session.
+- Test data — SQL injection: ' OR '1'='1
+- Test data — Script injection: <script>alert('xss')</script>",All preconditions are met.,,,Design,2,Story-1; Security; security
+,,,2,Enter ' OR '1'='1 in both Username and Password and click Login.,The error 'Epic sadface: Username and password do not match any user in this service' is displayed and the URL remains https://www.saucedemo.com/.,,,,,
+,,,3,"Reload the page. Enter <script>alert('xss')</script> in Username, 'secret_sauce' in Password and click Login.",No browser alert pop-up appears; the 'Username and password do not match any user in this service' error is displayed and the URL remains https://www.saucedemo.com/.,,,,,
+,Test Case,TC-1-012: Display authentication errors prominently near the login form,1,"Setup:
+- Browser window is 1366×768 or larger, on https://www.saucedemo.com/ with no active session.
+- Test data — Username: invalid_user
+- Test data — Password: invalid_pass",All preconditions are met.,,,Design,3,Story-1; UI; ui
+,,,2,Enter 'invalid_user' / 'invalid_pass' and click Login.,An error banner with a red background appears directly above the Login button and is fully visible without scrolling.,,,,,
+,,,3,Look at the Username and Password fields.,Both fields display an error (✖) icon and a red underline.,,,,,
+,,,4,Click the close (✖) button on the error banner.,"The banner disappears, the field error icons are removed, and the entered values remain in the fields.",,,,,
+,Test Case,TC-1-013: Reject username with different letter case or surrounding spaces,1,"Setup:
+- Browser is on https://www.saucedemo.com/ with no active session.
+- Test data — Upper-case username: Standard_User
+- Test data — Username with spaces: ' standard_user ' (one leading and one trailing space)
+- Test data — Password: secret_sauce",All preconditions are met.,,,Design,3,Story-1; Negative; validation
+,,,2,"Enter 'Standard_User' in Username, 'secret_sauce' in Password and click Login.",The error 'Epic sadface: Username and password do not match any user in this service' is displayed and the URL remains https://www.saucedemo.com/.,,,,,
+,,,3,"Reload the page. Enter ' standard_user ' (with leading and trailing space) in Username, 'secret_sauce' in Password and click Login.",The error 'Epic sadface: Username and password do not match any user in this service' is displayed and the URL remains https://www.saucedemo.com/.,,,,,
+,Test Case,TC-1-014: Allow login by pressing Enter in the Password field,1,"Setup:
+- Browser is on https://www.saucedemo.com/ with no active session.
+- Test data — Username: standard_user
+- Test data — Password: secret_sauce",All preconditions are met.,,,Design,3,Story-1; Usability; keyboard
+,,,2,Enter 'standard_user' in Username and 'secret_sauce' in Password.,,,,,,
+,,,3,"With focus in Password, press the Enter key.",The URL changes to https://www.saucedemo.com/inventory.html and the 'Products' header is displayed.,,,,,
+,Test Case,TC-1-015: Allow successful login immediately after a failed attempt,1,"Setup:
+- Browser is on https://www.saucedemo.com/ with no active session.
+- Test data — Wrong password: wrong_password
+- Test data — Correct password: secret_sauce",All preconditions are met.,,,Design,3,Story-1; Functional; regression
+,,,2,Enter 'standard_user' / 'wrong_password' and click Login.,The error 'Epic sadface: Username and password do not match any user in this service' is displayed.,,,,,
+,,,3,"Clear Password, enter 'secret_sauce' and click Login.","The URL changes to https://www.saucedemo.com/inventory.html, the 'Products' header is displayed and no error message is shown.",,,,,
